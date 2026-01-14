@@ -1,0 +1,68 @@
+{
+  "name": "Financial Recommendation Model",
+  "description": "نموذج ذكي للتوصيات المالية في تطبيق قيراط",
+  "version": "1.0",
+  "author": "MiniMax Agent",
+  "input_shape": [
+    12
+  ],
+  "output_shape": [
+    10
+  ],
+  "input_type": "float32",
+  "output_type": "float32",
+  "labels": [
+    "goal_at_risk",
+    "budget_exceeded",
+    "high_expense",
+    "good_savings_rate",
+    "overdue_goal",
+    "unusual_spending",
+    "low_savings_rate",
+    "goal_on_track",
+    "expense_pattern",
+    "income_opportunity"
+  ],
+  "normalization": {
+    "mean": [
+      0.715647,
+      0.145523,
+      0.634338,
+      0.502745,
+      0.520029,
+      0.233683,
+      0.651555,
+      0.594908,
+      0.24972,
+      0.028683,
+      0.580133,
+      0.583301
+    ],
+    "std": [
+      0.159964,
+      0.116062,
+      0.094578,
+      0.171512,
+      0.192589,
+      0.266532,
+      0.198684,
+      0.226163,
+      0.153633,
+      0.041277,
+      0.157999,
+      0.192122
+    ]
+  },
+  "description_arabic": {
+    "goal_at_risk": "الهدف معرض للخطر ويحتاج اهتمام فوري",
+    "budget_exceeded": "سيتجاوز هذا المصروف الميزانية الشهرية",
+    "high_expense": "هذا مصروف عالي نسبياً",
+    "good_savings_rate": "معدل ادخار ممتاز",
+    "overdue_goal": "الهدف متأخر عن موعده",
+    "unusual_spending": "نمط إنفاق غير عادي",
+    "low_savings_rate": "معدل ادخار منخفض",
+    "goal_on_track": "الهدف في المسار الصحيح",
+    "expense_pattern": "نمط إنفاق متكرر في هذه الفئة",
+    "income_opportunity": "فرصة لزيادة الدخل"
+  }
+}
