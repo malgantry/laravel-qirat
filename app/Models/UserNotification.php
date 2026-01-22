@@ -11,6 +11,10 @@ class UserNotification extends Model
 
     protected $table = 'notifications';
 
+    protected $primaryKey = 'id';
+    public $incrementing = false; // notifications use UUID primary keys by default
+    protected $keyType = 'string';
+
     protected $fillable = [
         'user_id',
         'type',
@@ -18,6 +22,8 @@ class UserNotification extends Model
         'body',
         'data',
         'read_at',
+        'notifiable_id',
+        'notifiable_type',
     ];
 
     protected $casts = [

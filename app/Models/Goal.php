@@ -10,6 +10,7 @@ class Goal extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'target_amount',
         'current_amount',
@@ -23,6 +24,11 @@ class Goal extends Model
         'current_amount' => 'decimal:2',
     ];
 
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
     public function getProgressAttribute(): float
     {
         $target = (float) $this->target_amount;
@@ -31,5 +37,10 @@ class Goal extends Model
         }
 
         return min(100, round(((float) $this->current_amount / $target) * 100, 2));
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

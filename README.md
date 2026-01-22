@@ -1,59 +1,63 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+## Qirat Personal Finance (Laravel + FastAPI AI)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Laravel 12 application for personal finance tracking with AI-powered insights from the bundled FastAPI service (`qirat_ai_api`).
 
-## About Laravel
+### Requirements
+- PHP 8.2+
+- Composer
+- Node.js 18+
+- Python 3.10+ (for the AI service)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Environment
+Copy `.env.example` to `.env` and set at least:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- `AI_SERVICE_URL` (default `http://localhost:8001`)
+- `AI_SERVICE_TIMEOUT` (seconds)
+- `AI_API_KEY` (optional shared secret between UI and AI API)
+- `AI_MODEL_DIR` (path to ML artifacts; default `./models` or `qirat_ai_api/models`)
+- `APP_URL`, database connection, mail settings as needed
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Install & Run (Laravel)
+```bash
+composer install
+php artisan key:generate
+php artisan migrate
+npm install
+npm run dev # or npm run build for production
+php artisan serve
+```
 
-## Learning Laravel
+PDF export depends on `barryvdh/laravel-dompdf` (declared in composer.json). If you skipped `composer install`, run `composer require barryvdh/laravel-dompdf` before using PDF downloads.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Install & Run (AI service)
+```bash
+cd qirat_ai_api
+python -m venv .venv && .venv\Scripts\activate  # Windows PowerShell
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8001
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Install & Run (Docker)
+This project includes a `docker-compose.yml` for running the full stack (Laravel + MySQL + AI Service).
 
-## Laravel Sponsors
+```bash
+docker-compose up --build
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Project Structure
+- `qirat_ai_api/`: The Python FastAPI service for AI insights.
+- `scripts/`: Helper scripts (e.g., `generate_financial_training_data.py`).
+- `docs/`: Documentation files (e.g., API PDF).
 
-### Premium Partners
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Optional environment for the AI service:
+- `QIRAT_AI_DB` to choose the learning DB path (defaults to `qirat_learning.db` inside `qirat_ai_api`).
+- `AI_MODEL_DIR` if you place models elsewhere (e.g., the repo-level `models/financial_recommendation_model.tflite`). Point `AI_SERVICE_URL` in Laravel to the running FastAPI instance.
 
-## Contributing
+### Data Model Notes
+- Transactions, goals, and budgets are scoped to the authenticated user (`user_id`), including queries in reports/exports.
+- Budgets link to user-owned categories only.
+- The AI client now sends a fixed 12-feature vector for transactions/goals to match the training schema in `financial_training_data.csv`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Frontend
+Vite is configured; use `npm run dev` during development. For production assets, run `npm run build` before deployment.

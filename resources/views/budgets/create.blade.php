@@ -4,123 +4,147 @@
     @php
         $expenseCats = ($categories ?? collect())->where('type', 'expense');
         $selectedCategoryId = old('category_id');
+        
+        // Premium Icons & Palettes (Unified Standard)
         $fallbackIcons = [
-            'طعام' => 'bi-egg-fried','تسوق' => 'bi-cart2','فواتير' => 'bi-receipt','ترفيه' => 'bi-mic','هاتف' => 'bi-phone','رياضة' => 'bi-activity','تجميل' => 'bi-person-hearts','تعليم' => 'bi-journal-text','اجتماعي' => 'bi-people',
-            'راتب' => 'bi-cash-coin','مكافأة' => 'bi-gift','استثمار' => 'bi-graph-up-arrow','تحويل' => 'bi-arrow-left-right'
+            'طعام' => 'bi-egg-fried', 'تسوق' => 'bi-cart2', 'فواتير' => 'bi-receipt', 'ترفيه' => 'bi-controller',
+            'هاتف' => 'bi-phone', 'رياضة' => 'bi-activity', 'تجميل' => 'bi-person-hearts', 'تعليم' => 'bi-journal-text',
+            'اجتماعي' => 'bi-people', 'راتب' => 'bi-cash-coin', 'مكافأة' => 'bi-gift', 'استثمار' => 'bi-graph-up-arrow',
+            'تحويل' => 'bi-arrow-left-right', 'مواصلات' => 'bi-bus-front', 'صحة' => 'bi-bandaid', 'هدايا' => 'bi-gift',
+            'غير مصنف' => 'bi-question-circle'
         ];
         $palette = [
-            'طعام' => '#F59E0B','تسوق' => '#8B5CF6','فواتير' => '#EF4444','ترفيه' => '#3B82F6','هاتف' => '#06B6D4','رياضة' => '#10B981','تجميل' => '#EC4899','تعليم' => '#22C55E','اجتماعي' => '#6366F1'
+            'طعام' => '#fb923c', 'تسوق' => '#a855f7', 'فواتير' => '#ef4444', 'ترفيه' => '#f472b6',
+            'هاتف' => '#38bdf8', 'رياضة' => '#4ade80', 'تجميل' => '#ec4899', 'تعليم' => '#6366f1',
+            'اجتماعي' => '#f59e0b', 'راتب' => '#10b981', 'مكافأة' => '#34d399', 'استثمار' => '#059669',
+            'تحويل' => '#6366f1', 'مواصلات' => '#06b6d4', 'صحة' => '#f43f5e', 'هدايا' => '#f59e0b',
+            'غير مصنف' => '#94a3b8'
+        ];
+
+        $catMap = [
+            'طعام' => 'food', 'تسوق' => 'shopping', 'فواتير' => 'bills', 'ترفيه' => 'entertainment',
+            'هاتف' => 'phone', 'رياضة' => 'sports', 'تجميل' => 'beauty', 'تعليم' => 'education',
+            'اجتماعي' => 'social', 'راتب' => 'salary', 'مكافأة' => 'bonus', 'استثمار' => 'investment',
+            'تحويل' => 'transfer', 'صحة' => 'health', 'مواصلات' => 'transport', 'هدايا' => 'gifts',
+            'غير مصنف' => 'uncategorized'
         ];
     @endphp
 
-    <style>
-        .form-card-tight { max-width: 880px; margin: 0 auto; }
-        .category-round-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
-        @media (max-width: 768px) { .category-round-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-        @media (max-width: 640px) { .category-round-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-        .category-tile.round { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; border: 1px solid #e2e8f0; background: #fff; color: var(--cat-color,#0f172a); transition: all .15s ease; }
-        .category-tile.round:hover { transform: translateY(-2px); box-shadow: 0 10px 18px rgba(15,23,42,0.06); }
-        .category-tile.round.active-expense { border-color: #ef4444; box-shadow: 0 10px 20px rgba(239,68,68,0.12); }
-        .cat-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .cat-label { font-size: .85rem; font-weight: 600; }
-        .icon-pick { border: 1px solid var(--card-border, #e2e8f0); background: var(--card-bg, #ffffff); }
-        .icon-pick.active { border-color: #c9a227; box-shadow: 0 0 0 2px rgba(201,162,39,0.25); }
-    </style>
+            <form action="{{ route('budgets.store') }}" method="POST" class="space-y-6" novalidate>
+                @csrf
 
-    <div class="form-hero" dir="rtl">
-        <div class="form-card form-card-tight">
-            <div class="accent-bar"></div>
-            <div class="card-body space-y-4">
-                <div class="d-flex align-items-start gap-3">
-                    <div class="p-2 rounded-circle" style="background: rgba(15,118,110,0.12); color: #0f766e;">
-                        <i class="bi bi-wallet2 fs-4"></i>
+                <!-- Category Selection -->
+                <div>
+                     <div class="flex items-center justify-between mb-3">
+                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300" data-i18n="selectCategory">اختر الفئة</label>
+                        <button type="button" id="btn-add-cat" class="text-xs font-bold text-[var(--gold-600)] hover:underline flex items-center gap-1">
+                            <i class="bi bi-plus-circle"></i> <span data-i18n="newCategory">فئة جديدة</span>
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" name="category_id" id="category_id_hidden" value="{{ $selectedCategoryId }}">
+                    
+                    <div class="category-grid">
+                        @foreach($expenseCats as $cat)
+                            @php
+                                $icon = $cat->icon ?: ($fallbackIcons[$cat->name] ?? 'bi-basket');
+                                $col = $palette[$cat->name] ?? ($cat->color ?? '#ef4444');
+                            @endphp
+                            <div class="flex flex-col items-center">
+                                <button type="button" class="category-btn {{ (string)$selectedCategoryId === (string)$cat->id ? 'active' : '' }}" 
+                                        data-id="{{ $cat->id }}" data-name="{{ $cat->name }}" style="--cat-color: {{ $col }};">
+                                    <i class="bi {{ $icon }}"></i>
+                                </button>
+                                <span class="cat-label" data-i18n="{{ $catMap[$cat->name] ?? '' }}">{{ $cat->name }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                    @error('category_id')
+                        <div class="invalid-feedback-premium">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            <span>{{ $message }}</span>
+                        </div>
+                    @enderror
+                </div>
+
+                <!-- Quick Add Category (Hidden by default) -->
+                <div id="quick-cat" class="glass-panel p-4 rounded-xl hidden">
+                    <h6 class="font-bold text-sm mb-3 text-slate-700" data-i18n="quickNewCategory">فئة جديدة سريعة</h6>
+                    <div class="space-y-3">
+                        <input type="text" id="qc-name" class="input-premium py-2" data-i18n-placeholder="categoryName" placeholder="Category Name">
+                        <div class="flex flex-wrap gap-2">
+                             @php($icons = ['bi-egg-fried','bi-bag','bi-car-front','bi-gift','bi-receipt','bi-mortarboard','bi-heart','bi-basket'])
+                             @foreach($icons as $ic)
+                                <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 hover:border-amber-400 icon-pick" data-icon="{{ $ic }}">
+                                    <i class="bi {{ $ic }}"></i>
+                                </button>
+                            @endforeach
+                            <input type="hidden" id="qc-icon">
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" id="qc-save" class="btn-gold flex-1 py-1.5 text-sm" data-i18n="save">حفظ</button>
+                            <button type="button" id="qc-cancel" class="btn-soft flex-1 py-1.5 text-sm" data-i18n="cancel">إلغاء</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Limit Amount -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2" data-i18n="budgetLimit">حد الميزانية</label>
+                    <div class="relative">
+                        <input type="number" step="0.01" name="limit_amount" class="input-premium text-center text-2xl font-bold pl-12 @error('limit_amount') input-invalid @enderror" placeholder="0.00" value="{{ old('limit_amount') }}" required min="1" max="99999999">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold" data-i18n="lydSymbol">د.ل</span>
+                    </div>
+                    @error('limit_amount')
+                        <div class="invalid-feedback-premium">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            <span>{{ $message }}</span>
+                        </div>
+                    @enderror
+                </div>
+ 
+                <!-- Period -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2" data-i18n="periodStart">بداية الفترة</label>
+                        <input type="date" name="period_start" class="input-premium @error('period_start') input-invalid @enderror" value="{{ old('period_start', now()->toDateString()) }}" required>
+                        @error('period_start')
+                            <div class="invalid-feedback-premium">
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                                <span>{{ $message }}</span>
+                            </div>
+                        @enderror
                     </div>
                     <div>
-                        <h5 class="mb-1">ميزانية جديدة</h5>
-                        <div class="form-sub">حدد الفئة وحد الميزانية.</div>
-                    </div>
-                    <div class="ms-auto d-flex gap-2">
-                        <button type="button" id="btn-add-cat" class="btn btn-light d-flex align-items-center gap-1"><i class="bi bi-plus-circle"></i> فئة جديدة</button>
-                        <a href="{{ route('budgets.index') }}" class="btn btn-light">عودة</a>
-                    </div>
-                </div>
-
-    <form action="{{ route('budgets.store') }}" method="POST" class="space-y-4" novalidate>
-        @csrf
-        <div class="mb-3">
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <label class="form-label mb-0">اختر الفئة</label>
-            </div>
-            <input type="hidden" name="category_id" id="category_id_hidden" value="{{ $selectedCategoryId }}">
-            <div class="category-round-grid">
-                @foreach($expenseCats as $cat)
-                    @php
-                        $icon = $cat->icon ?: ($fallbackIcons[$cat->name] ?? 'bi-basket');
-                        $col = $palette[$cat->name] ?? ($cat->color ?? '#ef4444');
-                    @endphp
-                    <div class="cat-item">
-                        <button type="button" class="category-tile round {{ (string)$selectedCategoryId === (string)$cat->id ? 'active-expense' : '' }}" data-id="{{ $cat->id }}" data-name="{{ $cat->name }}" style="--cat-color: {{ $col }};">
-                            <i class="bi {{ $icon }}"></i>
-                        </button>
-                        <div class="cat-label">{{ $cat->name }}</div>
-                    </div>
-                @endforeach
-            </div>
-            @error('category_id')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
-            <div id="quick-cat" class="mt-2 d-none">
-                <div class="card-soft border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-sm">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label mb-1 text-slate-800 dark:text-slate-100">اسم الفئة</label>
-                            <input type="text" id="qc-name" class="form-control pill-input" placeholder="مثلاً: قهوة">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label mb-1 text-slate-800 dark:text-slate-100">الأيقونة</label>
-                            <input type="hidden" id="qc-icon" value="">
-                            <div id="qc-icon-grid" class="d-flex flex-wrap gap-2">
-                                @php($icons = ['bi-egg-fried','bi-bag','bi-car-front','bi-gift','bi-receipt','bi-mortarboard','bi-heart','bi-basket'])
-                                @foreach($icons as $ic)
-                                    <button type="button" class="btn btn-light icon-pick" data-icon="{{ $ic }}"><i class="bi {{ $ic }}"></i></button>
-                                @endforeach
+                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2" data-i18n="periodEnd">نهاية الفترة</label>
+                        <input type="date" name="period_end" class="input-premium @error('period_end') input-invalid @enderror" value="{{ old('period_end', now()->addMonth()->toDateString()) }}" required>
+                        @error('period_end')
+                            <div class="invalid-feedback-premium">
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                                <span>{{ $message }}</span>
                             </div>
-                        </div>
-                        <div class="col-md-4 d-flex gap-2">
-                            <button type="button" class="btn btn-primary flex-fill" id="qc-save">حفظ الفئة</button>
-                            <button type="button" class="btn btn-light flex-fill" id="qc-cancel">إلغاء</button>
-                        </div>
+                        @enderror
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label">الحد</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-piggy-bank"></i></span>
-                    <input type="number" step="0.01" name="limit_amount" class="form-control" value="{{ old('limit_amount') }}" required aria-required="true">
-                    <span class="input-group-text">د.ل</span>
+                
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2" data-i18n="status">الحالة</label>
+                    <input type="text" name="status" class="input-premium" value="{{ old('status', 'active') }}" data-i18n-placeholder="statusPlaceholder" placeholder="active">
                 </div>
-                <small class="text-muted">ضع سقف المصروف للفئة المختارة.</small>
-                @error('limit_amount')<div class="text-danger small">{{ $message }}</div>@enderror
-            </div>
-        </div>
-        <div class="mt-3">
-            <label class="form-label">الحالة (اختياري)</label>
-            <input type="text" name="status" class="form-control" value="{{ old('status') }}" placeholder="نشطة / متوقفة">
-        </div>
-        <div class="d-flex flex-column flex-sm-row gap-2 pt-2">
-            <a href="{{ route('budgets.index') }}" class="btn btn-light flex-1">إلغاء</a>
-            <button class="btn primary-gradient flex-1">حفظ الميزانية</button>
-        </div>
-    </form>
-            </div>
+ 
+                <!-- Actions -->
+                <div class="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <button type="submit" class="btn-gold flex-1 text-center justify-center py-3 text-lg shadow-md" data-i18n="saveBudget">حفظ الميزانية</button>
+                    <a href="{{ route('budgets.index') }}" class="btn-soft px-6" data-i18n="cancel">إلغاء</a>
+                </div>
+            </form>
         </div>
     </div>
 
     @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const tiles = document.querySelectorAll('.category-tile');
+            const tiles = document.querySelectorAll('.category-btn');
             const hidden = document.getElementById('category_id_hidden');
             const btnAddCat = document.getElementById('btn-add-cat');
             const quickCat = document.getElementById('quick-cat');
@@ -128,68 +152,84 @@
             const qcIcon = document.getElementById('qc-icon');
             const qcSave = document.getElementById('qc-save');
             const qcCancel = document.getElementById('qc-cancel');
-            const clearActive = () => tiles.forEach(t => t.classList.remove('active-expense'));
+            
+            const clearActive = () => tiles.forEach(t => t.classList.remove('active'));
+            
+            // Select default if none selected
             const selectDefault = () => {
                 if (hidden.value) return;
                 const first = tiles[0];
                 if (first) {
                     hidden.value = first.dataset.id || '';
                     clearActive();
-                    first.classList.add('active-expense');
+                    first.classList.add('active');
                 }
             };
+            
             tiles.forEach(tile => {
-                tile.addEventListener('click', () => {
+                tile.addEventListener('click', (e) => {
+                    e.preventDefault(); // prevent form submit if button type not explicitly 'button' (though it is)
                     clearActive();
-                    tile.classList.add('active-expense');
+                    tile.classList.add('active');
                     hidden.value = tile.dataset.id || '';
                 });
             });
             selectDefault();
 
-            if (btnAddCat) btnAddCat.addEventListener('click', () => quickCat.classList.toggle('d-none'));
-            const iconButtons = Array.from(document.querySelectorAll('#qc-icon-grid .icon-pick'));
-            const setIcon = (btn) => {
-                iconButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                qcIcon.value = btn.dataset.icon || '';
-            };
-            if (iconButtons.length) setIcon(iconButtons[0]);
-            iconButtons.forEach(btn => btn.addEventListener('click', () => setIcon(btn)));
-            if (qcCancel) qcCancel.addEventListener('click', () => { quickCat.classList.add('d-none'); qcName.value=''; qcIcon.value=''; iconButtons.forEach(b=>b.classList.remove('active')); iconButtons[0]?.classList.add('active'); qcIcon.value = iconButtons[0]?.dataset.icon || ''; });
+            // Quick Category Logic
+            if (btnAddCat) btnAddCat.addEventListener('click', () => quickCat.classList.remove('hidden'));
+            if (qcCancel) qcCancel.addEventListener('click', () => quickCat.classList.add('hidden'));
+
+            document.querySelectorAll('.icon-pick').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.icon-pick').forEach(b => b.classList.remove('border-amber-400', 'bg-amber-50'));
+                    btn.classList.add('border-amber-400', 'bg-amber-50');
+                    qcIcon.value = btn.dataset.icon;
+                });
+            });
+            
             if (qcSave) {
-                qcSave.addEventListener('click', async () => {
+                 qcSave.addEventListener('click', async () => {
                     const name = qcName.value.trim();
                     const icon = qcIcon.value;
                     const type = 'expense';
-                    if (!name) return alert('يرجى إدخال اسم الفئة');
-                    const token = document.querySelector('input[name="_token"]').value;
-                    const res = await fetch('{{ route('categories.quickStore') }}', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token }, body: JSON.stringify({ name, icon, type })
-                    });
-                    if (!res.ok) return alert('تعذر حفظ الفئة');
-                    const cat = await res.json();
-                    const grid = document.querySelector('.category-round-grid');
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'cat-item';
-                    const btn = document.createElement('button');
-                    btn.type = 'button'; btn.className='category-tile round active-expense';
-                    btn.dataset.id = cat.id; btn.dataset.name = cat.name;
-                    btn.innerHTML = `<i class="bi ${cat.icon || 'bi-basket'}"></i>`;
-                    const palette = { 'طعام': '#F59E0B','تسوق': '#8B5CF6','فواتير': '#EF4444','ترفيه': '#3B82F6','هاتف': '#06B6D4','رياضة': '#10B981','تجميل': '#EC4899','تعليم': '#22C55E','اجتماعي': '#6366F1' };
-                    const color = palette[cat.name] || '#ef4444';
-                    btn.style.setProperty('--cat-color', color);
-                    const label = document.createElement('div');
-                    label.className = 'cat-label';
-                    label.textContent = cat.name;
-                    clearActive();
-                    wrapper.appendChild(btn);
-                    wrapper.appendChild(label);
-                    grid.appendChild(wrapper);
-                    hidden.value = cat.id;
-                    btn.addEventListener('click', () => { clearActive(); btn.classList.add('active-expense'); hidden.value = cat.id; });
-                    quickCat.classList.add('d-none'); qcName.value=''; qcIcon.value='';
-                });
+                    if (!name) return;
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                     try {
+                        const res = await fetch('{{ route('categories.quickStore') }}', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token },
+                            body: JSON.stringify({ name, icon, type })
+                        });
+                        if(res.ok) {
+                            const cat = await res.json();
+                            const grid = document.querySelector('.category-grid');
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'flex flex-col items-center animate-enter';
+                            wrapper.innerHTML = `
+                                <button type="button" class="category-btn active" data-id="${cat.id}" data-name="${cat.name}" style="--cat-color: #ef4444;">
+                                    <i class="bi ${cat.icon || 'bi-basket'}"></i>
+                                </button>
+                                <span class="cat-label">${cat.name}</span>
+                            `;
+                            
+                            clearActive();
+                            grid.appendChild(wrapper);
+                            hidden.value = cat.id;
+
+                            // Rebind
+                             wrapper.querySelector('button').addEventListener('click', function() {
+                                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                                this.classList.add('active');
+                                hidden.value = this.dataset.id;
+                            });
+                            
+                            quickCat.classList.add('hidden');
+                            qcName.value = '';
+                        }
+                    } catch(e) { console.error(e); alert('Error'); }
+                 });
             }
         });
     </script>

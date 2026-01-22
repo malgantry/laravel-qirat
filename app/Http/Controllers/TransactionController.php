@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Goal;
 use App\Models\Transaction;
+use App\Http\Requests\StoreTransactionRequest;
 use App\Services\Insights\TransactionInsightsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,11 +13,19 @@ use Illuminate\View\View;
 
 class TransactionController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
     public function index(TransactionInsightsService $insights): View
     {
+        $userId = auth()->id();
         $q = request('q');
         $typeFilter = request('type');
+
         $transactions = Transaction::query()
+            ->where('user_id', $userId)
             ->when(in_array($typeFilter, ['income','expense'], true), fn($qr) => $qr->where('type', $typeFilter))
             ->when($q, function ($qr) use ($q) {
                 $qr->where(function ($sub) use ($q) {
@@ -28,78 +38,135 @@ class TransactionController extends Controller
             ->paginate(15)
             ->appends(['q' => $q, 'type' => $typeFilter]);
 
-        $feedback = [];
-        foreach ($transactions as $tx) {
-            $feedback[$tx->id] = $insights->generateFor($tx);
-        }
-
-        return view('transactions.index', compact('transactions', 'feedback'));
+        return view('transactions.index', compact('transactions'));
     }
 
     public function create(): View
     {
-        $this->ensureStarterCategories();
-        $categories = Category::orderBy('name')->get();
+        $user = auth()->user();
+        $this->ensureStarterCategories($user->id);
+        
+        $categories = Category::where('user_id', $user->id)->orderBy('name')->get();
+        [$expenseTiles, $incomeTiles] = $this->splitCategoryTiles($categories);
+        $goals = Goal::where('user_id', $user->id)->where('status', 'in_progress')->orderBy('name')->get();
         $icons = $this->iconChoices();
-        return view('transactions.create', compact('categories', 'icons'));
+
+        return view('transactions.create', compact('categories', 'icons', 'goals', 'expenseTiles', 'incomeTiles'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreTransactionRequest $request): RedirectResponse
     {
-        $data = $this->validateData($request);
-        Transaction::create($data);
+        $data = $request->validated();
+        $data['user_id'] = $request->user()->id;
+        
+        $savingsAmount = $data['savings_amount'] ?? null;
+        unset($data['savings_amount']);
+
+        $data['is_fixed'] = $data['type'] === 'expense' ? (bool) ($request->is_fixed ?? false) : false;
+
+        // Logic for Income Savings Allocation
+        $goalId = $data['goal_id'] ?? null;
+        if ($data['type'] === 'income' && $goalId) {
+             $data['goal_id'] = null; 
+             $data['note'] = ($data['note'] ?? '') . ' (Allocated to goal)';
+        }
+
+        $transaction = Transaction::create($data);
+
+        if ($data['type'] === 'income' && $goalId) {
+            $this->handleGoalAllocation($request->user(), $goalId, $savingsAmount ?? $transaction->amount, $data['occurred_at']);
+        }
 
         return redirect()->route('transactions.index')->with('status', 'تم حفظ المعاملة بنجاح');
     }
 
-    public function edit(Transaction $transaction): View
+    protected function handleGoalAllocation($user, $goalId, $amount, $date)
     {
-        $this->ensureStarterCategories();
-        $categories = Category::orderBy('name')->get();
-        $icons = $this->iconChoices();
-        return view('transactions.edit', compact('transaction', 'categories', 'icons'));
+        $goal = Goal::find($goalId);
+        if ($goal) {
+            $goal->increment('current_amount', $amount);
+            Transaction::create([
+                'user_id' => $user->id,
+                'type' => 'expense',
+                'amount' => $amount,
+                'category' => 'Savings',
+                'occurred_at' => $date,
+                'note' => __('Allocated to goal') . ': ' . $goal->name,
+                'goal_id' => $goal->id,
+            ]);
+        }
     }
 
-    public function update(Request $request, Transaction $transaction): RedirectResponse
+    public function edit(Transaction $transaction): View
     {
-        $data = $this->validateData($request);
+        $this->authorizeTransaction($transaction);
+        $user = auth()->user();
+
+        $categories = Category::where('user_id', $user->id)->orderBy('name')->get();
+        [$expenseTiles, $incomeTiles] = $this->splitCategoryTiles($categories);
+        $goals = Goal::where('user_id', $user->id)
+            ->when(!$transaction->goal_id, function($q){ $q->where('status', 'in_progress'); })
+            ->orderBy('name')
+            ->get();
+            
+        $icons = $this->iconChoices();
+        return view('transactions.edit', compact('transaction', 'categories', 'icons', 'goals', 'expenseTiles', 'incomeTiles'));
+    }
+
+    public function update(StoreTransactionRequest $request, Transaction $transaction): RedirectResponse
+    {
+        $this->authorizeTransaction($transaction);
+        
+        $oldAmount = $transaction->amount;
+        $oldGoalId = $transaction->goal_id;
+        $oldType = $transaction->type;
+
+        $data = $request->validated();
+        unset($data['savings_amount']);
+        $data['is_fixed'] = $data['type'] === 'expense' ? (bool) ($request->is_fixed ?? false) : false;
+
+        if ($data['type'] === 'income') {
+            unset($data['goal_id']);
+        }
+        
         $transaction->update($data);
+
+        // Manage Goal Balance Shifts
+        if ($oldType === 'expense' && $oldGoalId) {
+            optional(Goal::find($oldGoalId))->decrement('current_amount', $oldAmount);
+        }
+
+        if ($transaction->type === 'expense' && $transaction->goal_id) {
+             optional(Goal::find($transaction->goal_id))->increment('current_amount', $transaction->amount);
+        }
 
         return redirect()->route('transactions.index')->with('status', 'تم تحديث المعاملة بنجاح');
     }
 
     public function destroy(Transaction $transaction): RedirectResponse
     {
-        $transaction->delete();
-
-        return redirect()->route('transactions.index')->with('status', 'تم حذف المعاملة');
-    }
-
-    private function validateData(Request $request): array
-    {
-        $data = $request->validate([
-            'type' => ['required', 'in:income,expense'],
-            'category_id' => ['nullable', 'exists:categories,id', 'required_without:category'],
-            'category' => ['nullable', 'string', 'max:120', 'required_without:category_id'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'occurred_at' => ['required', 'date'],
-            'note' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        // If category_id provided, prefer it and sync the category name
-        if (!empty($data['category_id'])) {
-            $cat = Category::find($data['category_id']);
-            if ($cat) {
-                $data['category'] = $cat->name;
+        $this->authorizeTransaction($transaction);
+        
+        if ($transaction->type === 'expense' && $transaction->goal_id) {
+            $goal = Goal::find($transaction->goal_id);
+            if ($goal) {
+                $goal->update(['current_amount' => max(0, $goal->current_amount - $transaction->amount)]);
             }
         }
 
-        return $data;
+        $transaction->delete();
+        return redirect()->route('transactions.index')->with('status', 'تم حذف المعاملة');
+    }
+
+    private function authorizeTransaction(Transaction $transaction): void
+    {
+        if ($transaction->user_id !== auth()->id()) {
+            abort(404);
+        }
     }
 
     private function iconChoices(): array
     {
-        // Common Bootstrap Icons useful for finance categories
         return [
             'bi-egg-fried','bi-cart2','bi-receipt','bi-mic','bi-phone','bi-activity','bi-person-hearts','bi-journal-text','bi-people',
             'bi-cash-coin','bi-gift','bi-graph-up-arrow','bi-arrow-left-right','bi-bag','bi-fuel-pump','bi-bus-front','bi-house','bi-lightning',
@@ -107,45 +174,47 @@ class TransactionController extends Controller
         ];
     }
 
-    private function ensureStarterCategories(): void
+    private function ensureStarterCategories(int $userId): void
     {
-        // If there are already categories, skip
-        if (Category::query()->exists()) return;
+        if (Category::where('user_id', $userId)->exists()) return;
 
-        $userId = optional(request()->user())->id;
-        if (!$userId) {
-            $userId = \App\Models\User::query()->value('id');
-        }
-        if (!$userId) return; // cannot create without a user due to FK
+        $starters = [
+            ['name' => 'طعام', 'type' => 'expense', 'icon' => 'bi-egg-fried', 'color' => '#fb923c'],
+            ['name' => 'تسوق', 'type' => 'expense', 'icon' => 'bi-cart2', 'color' => '#a855f7'],
+            ['name' => 'فواتير', 'type' => 'expense', 'icon' => 'bi-receipt', 'color' => '#ef4444'],
+            ['name' => 'ترفيه', 'type' => 'expense', 'icon' => 'bi-mic', 'color' => '#f472b6'],
+            ['name' => 'هاتف', 'type' => 'expense', 'icon' => 'bi-phone', 'color' => '#38bdf8'],
+            ['name' => 'رياضة', 'type' => 'expense', 'icon' => 'bi-activity', 'color' => '#4ade80'],
+            ['name' => 'تجميل', 'type' => 'expense', 'icon' => 'bi-person-hearts', 'color' => '#f472b6'],
+            ['name' => 'تعليم', 'type' => 'expense', 'icon' => 'bi-journal-text', 'color' => '#6366f1'],
+            ['name' => 'اجتماعي', 'type' => 'expense', 'icon' => 'bi-people', 'color' => '#f59e0b'],
+            ['name' => 'راتب', 'type' => 'income', 'icon' => 'bi-cash-coin', 'color' => '#10b981'],
+            ['name' => 'مكافأة', 'type' => 'income', 'icon' => 'bi-gift', 'color' => '#34d399'],
+            ['name' => 'استثمار', 'type' => 'income', 'icon' => 'bi-graph-up-arrow', 'color' => '#059669'],
+            ['name' => 'تحويل', 'type' => 'income', 'icon' => 'bi-arrow-left-right', 'color' => '#6366f1'],
+        ];
 
-        $starters = $this->defaultCategories();
         foreach ($starters as $c) {
-            Category::firstOrCreate([
-                'user_id' => $userId,
-                'name' => $c['name'],
-                'type' => $c['type'],
-            ], [
-                'icon' => $c['icon'] ?? null,
-            ]);
+            Category::firstOrCreate(['user_id' => $userId, 'name' => $c['name'], 'type' => $c['type']], ['icon' => $c['icon'] ?? null, 'color' => $c['color'] ?? null]);
         }
     }
 
-    private function defaultCategories(): array
+    private function splitCategoryTiles($categories): array
     {
-        return [
-            ['name' => 'طعام', 'type' => 'expense', 'icon' => 'bi-egg-fried'],
-            ['name' => 'تسوق', 'type' => 'expense', 'icon' => 'bi-cart2'],
-            ['name' => 'فواتير', 'type' => 'expense', 'icon' => 'bi-receipt'],
-            ['name' => 'ترفيه', 'type' => 'expense', 'icon' => 'bi-mic'],
-            ['name' => 'هاتف', 'type' => 'expense', 'icon' => 'bi-phone'],
-            ['name' => 'رياضة', 'type' => 'expense', 'icon' => 'bi-activity'],
-            ['name' => 'تجميل', 'type' => 'expense', 'icon' => 'bi-person-hearts'],
-            ['name' => 'تعليم', 'type' => 'expense', 'icon' => 'bi-journal-text'],
-            ['name' => 'اجتماعي', 'type' => 'expense', 'icon' => 'bi-people'],
-            ['name' => 'راتب', 'type' => 'income', 'icon' => 'bi-cash-coin'],
-            ['name' => 'مكافأة', 'type' => 'income', 'icon' => 'bi-gift'],
-            ['name' => 'استثمار', 'type' => 'income', 'icon' => 'bi-graph-up-arrow'],
-            ['name' => 'تحويل', 'type' => 'income', 'icon' => 'bi-arrow-left-right'],
-        ];
+        $expense = [];
+        $income = [];
+
+        foreach ($categories as $c) {
+            $type = strtolower(trim($c->type ?? 'expense'));
+            $target = $type === 'income' ? 'income' : 'expense';
+            ${$target}[] = [
+                'id' => $c->id,
+                'name' => $c->name,
+                'icon' => $c->icon,
+                'color' => $c->color,
+            ];
+        }
+
+        return [$expense, $income];
     }
 }

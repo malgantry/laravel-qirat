@@ -22,8 +22,9 @@ class ProfileController extends Controller
         }
 
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:80'],
-            'avatar' => ['nullable', 'image', 'max:2048'],
+            'name' => ['required', 'string', 'min:3', 'max:80'],
+            'email' => ['required', 'email', 'unique:users,email,' . $user->id],
+            'avatar' => ['nullable', 'image', 'max:2048', 'mimes:jpeg,png,jpg'],
         ]);
 
         if ($request->hasFile('avatar')) {

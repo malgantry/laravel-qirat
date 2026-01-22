@@ -7,359 +7,497 @@
         $selectedCategoryId = old('category_id');
         $selectedCategoryName = old('category');
         $categories = $categories ?? collect();
-        $incomeCats = $categories->where('type','income');
-        $expenseCats = $categories->where('type','expense');
-        $fallbackIcons = [
-            'طعام' => 'bi-egg-fried','تسوق' => 'bi-cart2','فواتير' => 'bi-receipt','ترفيه' => 'bi-mic','هاتف' => 'bi-phone','رياضة' => 'bi-activity','تجميل' => 'bi-person-hearts','تعليم' => 'bi-journal-text','اجتماعي' => 'bi-people',
-            'راتب' => 'bi-cash-coin','مكافأة' => 'bi-gift','استثمار' => 'bi-graph-up-arrow','تحويل' => 'bi-arrow-left-right'
-        ];
-        $palette = [
-            'طعام' => '#F59E0B',
-            'تسوق' => '#8B5CF6',
-            'فواتير' => '#EF4444',
-            'ترفيه' => '#3B82F6',
-            'هاتف' => '#06B6D4',
-            'رياضة' => '#10B981',
-            'تجميل' => '#EC4899',
-            'تعليم' => '#22C55E',
-            'اجتماعي' => '#6366F1',
-            'راتب' => '#0EA5E9',
-            'مكافأة' => '#F43F5E',
-            'استثمار' => '#34D399',
-            'تحويل' => '#64748B',
+
+        // Define preset palettes and icons for a premium feel (Unified)
+        $catColors = [
+            'طعام' => '#fb923c', 'تسوق' => '#a855f7', 'فواتير' => '#ef4444', 'ترفيه' => '#f472b6',
+            'هاتف' => '#38bdf8', 'رياضة' => '#4ade80', 'تجميل' => '#ec4899', 'تعليم' => '#6366f1',
+            'اجتماعي' => '#f59e0b', 'راتب' => '#10b981', 'مكافأة' => '#34d399', 'استثمار' => '#059669',
+            'تحويل' => '#6366f1', 'مواصلات' => '#06b6d4', 'صحة' => '#f43f5e', 'هدايا' => '#f59e0b',
+            'غير مصنف' => '#94a3b8'
         ];
 
-        // فئات المصروف فقط
-        $expensePreset = [
-            ['name' => 'ترفيه', 'icon' => 'bi-controller', 'color' => '#f472b6', 'bg' => '#ffe4ed'],
-            ['name' => 'صحة', 'icon' => 'bi-heart', 'color' => '#f43f5e', 'bg' => '#ffe4e6'],
-            ['name' => 'تسوق', 'icon' => 'bi-bag', 'color' => '#a855f7', 'bg' => '#f3e8ff'],
-            ['name' => 'مواصلات', 'icon' => 'bi-car-front', 'color' => '#38bdf8', 'bg' => '#e0f2fe'],
-            ['name' => 'طعام', 'icon' => 'bi-egg-fried', 'color' => '#fb923c', 'bg' => '#fff7ed'],
-            ['name' => 'هدايا', 'icon' => 'bi-gift', 'color' => '#f59e0b', 'bg' => '#fff7ed'],
-            ['name' => 'فواتير', 'icon' => 'bi-receipt', 'color' => '#ef4444', 'bg' => '#fee2e2'],
-            ['name' => 'تعليم', 'icon' => 'bi-mortarboard', 'color' => '#6366f1', 'bg' => '#eef2ff'],
+        $catMap = [
+            'طعام' => 'food', 'تسوق' => 'shopping', 'فواتير' => 'bills', 'ترفيه' => 'entertainment',
+            'هاتف' => 'phone', 'رياضة' => 'sports', 'تجميل' => 'beauty', 'تعليم' => 'education',
+            'اجتماعي' => 'social', 'راتب' => 'salary', 'مكافأة' => 'bonus', 'استثمار' => 'investment',
+            'تحويل' => 'transfer', 'صحة' => 'health', 'مواصلات' => 'transport', 'هدايا' => 'gifts',
+            'غير مصنف' => 'uncategorized'
         ];
 
-        $expenseTiles = collect($expensePreset)->map(function ($tile) use ($expenseCats) {
-            $match = $expenseCats->firstWhere('name', $tile['name']);
-            $tile['id'] = $match->id ?? null;
-            return $tile;
-        });
-
-        $incomePreset = [
-            ['name' => 'راتب', 'icon' => 'bi-wallet2', 'color' => '#22c55e', 'bg' => '#ecfdf3'],
-            ['name' => 'مكافأة', 'icon' => 'bi-gift', 'color' => '#f43f5e', 'bg' => '#ffe4e6'],
-            ['name' => 'استثمار', 'icon' => 'bi-graph-up-arrow', 'color' => '#0ea5e9', 'bg' => '#e0f2fe'],
-            ['name' => 'تحويل', 'icon' => 'bi-arrow-left-right', 'color' => '#6366f1', 'bg' => '#eef2ff'],
+         $fallbackIcons = [
+            'طعام' => 'bi-egg-fried', 'تسوق' => 'bi-cart2', 'فواتير' => 'bi-receipt', 'ترفيه' => 'bi-controller',
+            'هاتف' => 'bi-phone', 'رياضة' => 'bi-activity', 'تجميل' => 'bi-person-hearts', 'تعليم' => 'bi-journal-text',
+            'اجتماعي' => 'bi-people', 'راتب' => 'bi-cash-coin', 'مكافأة' => 'bi-gift', 'استثمار' => 'bi-graph-up-arrow',
+            'تحويل' => 'bi-arrow-left-right', 'مواصلات' => 'bi-bus-front', 'صحة' => 'bi-bandaid', 'هدايا' => 'bi-gift',
+            'غير مصنف' => 'bi-question-circle'
         ];
-
-        // طقم دخل افتراضي مطابق للصورة مع ربطه ببيانات قاعدة البيانات إن وجدت
-        $incomeTiles = collect($incomePreset)->map(function ($tile) use ($incomeCats) {
-            $match = $incomeCats->firstWhere('name', $tile['name']);
-            $tile['id'] = $match->id ?? null;
-            return $tile;
-        });
-
-        // إضافة أي فئات دخل أخرى موجودة في قاعدة البيانات وليست في الطقم الافتراضي
-        $extraIncome = $incomeCats->filter(function ($cat) use ($incomePreset) {
-            return collect($incomePreset)->where('name', $cat->name)->isEmpty();
-        })->map(function ($cat) {
-            return [
-                'name' => $cat->name,
-                'id' => $cat->id,
-                'icon' => $cat->icon ?: 'bi-cash-coin',
-                'color' => '#22c55e',
-                'bg' => '#ecfdf3',
+        
+        $expenseTiles = [];
+        $incomeTiles = [];
+        foreach($categories as $c) {
+            $type = strtolower(trim($c->type ?? 'expense'));
+            $target = $type === 'income' ? 'incomeTiles' : 'expenseTiles';
+            ${$target}[] = [
+                'id' => $c->id,
+                'name' => $c->name,
+                'icon' => $c->icon ?: ($fallbackIcons[$c->name] ?? ($target === 'incomeTiles' ? 'bi-cash-coin' : 'bi-basket')),
+                'color' => $c->color ?: ($catColors[$c->name] ?? ($target === 'incomeTiles' ? '#10b981' : '#ef4444')),
             ];
-        });
-
-        $incomeTiles = $incomeTiles->concat($extraIncome)->values();
-        // مجموعة أيقونات افتراضية للاختيار السريع
-        $icons = [
-            'bi-egg-fried','bi-bag','bi-car-front','bi-gift','bi-receipt','bi-mortarboard','bi-heart','bi-basket',
-            'bi-phone','bi-activity','bi-person-hearts','bi-journal-text','bi-people',
-            'bi-cash-coin','bi-wallet2','bi-gift','bi-graph-up-arrow','bi-arrow-left-right'
-        ];
+        }
     @endphp
 
-    <style>
-        /* Ensure hidden grids don't render when toggled */
-        .d-none { display: none !important; }
-        .form-card-tight { max-width: 880px; margin: 0 auto; }
+    <div class="max-w-2xl mx-auto animate-enter">
+        <div class="card-premium p-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto bg-gradient-to-tr from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg mb-4">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <h2 class="text-2xl font-heading font-bold text-text-main" data-i18n="addNewTransaction">إضافة معاملة جديدة</h2>
+            </div>
+            
+            <form action="{{ route('transactions.store') }}" method="POST" class="space-y-6">
+                @csrf
 
-        .type-toggle { box-shadow: inset 0 0 0 1px rgba(148,163,184,0.28); background: rgba(255,255,255,0.65); }
-        .type-btn { transition: all 0.2s ease; border: 1px solid transparent; font-weight: 800; letter-spacing: -0.01em; font-size: 0.95rem; }
-        .type-btn.active-expense { background: linear-gradient(135deg, #0b0b0b, #c9a227); color: #fff; border-color: #c9a227; box-shadow: 0 10px 24px rgba(11,11,11,0.18); }
-        .type-btn.active-income { background: linear-gradient(135deg, #0b0b0b, #c9a227); color: #fff; border-color: #c9a227; box-shadow: 0 10px 24px rgba(11,11,11,0.18); }
-
-        .category-round-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
-        @media (max-width: 768px) { .category-round-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-        @media (max-width: 640px) { .category-round-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-        .category-tile.round { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; border: 1px solid #e2e8f0; background: #fff; color: var(--cat-color,#0f172a); transition: all .15s ease; }
-        .category-tile.round:hover { transform: translateY(-2px); box-shadow: 0 10px 18px rgba(15,23,42,0.06); }
-        .category-tile.round.active-expense { border-color: #ef4444; box-shadow: 0 10px 20px rgba(239,68,68,0.12); }
-        .category-tile.round.active-income { border-color: #22c55e; box-shadow: 0 10px 20px rgba(34,197,94,0.12); }
-        .cat-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .cat-label { font-size: .85rem; font-weight: 600; }
-
-        /* primary-gradient button now provided globally via app.scss */
-        .icon-pick { border: 1px solid var(--card-border, #e2e8f0); background: var(--card-bg, #ffffff); }
-        .icon-pick.active { border-color: #c9a227; box-shadow: 0 0 0 2px rgba(201,162,39,0.25); }
-    </style>
-
-    <div class="form-hero" dir="rtl">
-        <div class="form-card form-card-tight">
-            <div class="accent-bar"></div>
-            <div class="card-body space-y-5">
-                <div class="d-flex align-items-start gap-3">
-                    <div class="p-2 rounded-circle" style="background: rgba(201,162,39,0.15); color: #c9a227;">
-                        <i class="bi bi-cash-coin fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="mb-1">إضافة دخل/مصروف</h5>
-                        <div class="form-sub">اختر النوع ثم الفئة وأدخل التفاصيل.</div>
-                    </div>
+                <!-- Type Toggle -->
+                <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl relative">
+                    <button type="button" id="btn-expense" class="py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 {{ $selectedType === 'expense' ? 'bg-white dark:bg-slate-700 shadow text-red-500' : 'text-text-muted hover:text-slate-700' }}">
+                        <i class="bi bi-graph-down"></i> <span data-i18n="expense">مصروف</span>
+                    </button>
+                    <button type="button" id="btn-income" class="py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 {{ $selectedType === 'income' ? 'bg-white dark:bg-slate-700 shadow text-green-500' : 'text-text-muted hover:text-slate-700' }}">
+                         <i class="bi bi-graph-up"></i> <span data-i18n="income">دخل</span>
+                    </button>
+                    <input type="hidden" name="type" id="type" value="{{ $selectedType }}">
                 </div>
 
-                <form action="{{ route('transactions.store') }}" method="POST" class="space-y-4">
-                    @csrf
-
-        <div class="type-toggle grid grid-cols-2 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
-            <button type="button" id="btn-expense" class="type-btn py-2 font-semibold flex items-center justify-center gap-2 {{ $selectedType === 'expense' ? 'active-expense' : '' }}">
-                <i class="bi bi-arrow-down-circle"></i>
-                <span>مصروفات</span>
-            </button>
-            <button type="button" id="btn-income" class="type-btn py-2 font-semibold flex items-center justify-center gap-2 {{ $selectedType === 'income' ? 'active-income' : '' }}">
-                <i class="bi bi-arrow-up-circle"></i>
-                <span>دخل</span>
-            </button>
-        </div>
-
-        <input type="hidden" name="type" id="type" value="{{ $selectedType }}">
-
-        <div class="space-y-4">
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 p-3 flex flex-col gap-2">
-                <label class="form-label mb-0 text-slate-800 dark:text-slate-100">المبلغ</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-cash-coin"></i></span>
-                    <input type="number" step="0.01" name="amount" class="form-control form-control-lg" value="{{ old('amount') }}" placeholder="0.00" required aria-required="true">
-                    <span class="input-group-text">د.ل</span>
-                </div>
-                <small class="text-muted">أدخل المبلغ بدقة (يمكن استخدام الكسور العشرية).</small>
-                @error('amount')<div class="text-danger small">{{ $message }}</div>@enderror
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <label class="form-label mb-0 text-slate-800 dark:text-slate-100">الفئة</label>
-                <button type="button" id="btn-add-cat" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"><i class="bi bi-plus-circle"></i> فئة جديدة</button>
-            </div>
-            <input type="hidden" name="category_id" id="category_id_hidden" value="{{ $selectedCategoryId }}">
-            <input type="hidden" name="category" id="category_name_hidden" value="{{ $selectedCategoryName }}">
-
-            <div id="expense-grid" class="category-round-grid {{ $selectedType === 'expense' ? '' : 'd-none' }}">
-                @foreach($expenseTiles as $tile)
-                    @php $col = $tile['color'] ?? '#ef4444'; @endphp
-                    <div class="cat-item">
-                        <button type="button" class="category-tile round {{ (string)$selectedCategoryId === (string)$tile['id'] ? 'active-expense' : '' }}" data-type="expense" data-id="{{ $tile['id'] }}" data-name="{{ $tile['name'] }}" style="--cat-color: {{ $col }};">
-                            <i class="bi {{ $tile['icon'] }}"></i>
-                        </button>
-                        <div class="cat-label">{{ $tile['name'] }}</div>
+                <!-- Amount -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2" data-i18n="amount">المبلغ</label>
+                    <div class="relative">
+                        <input type="number" step="0.01" name="amount" class="input-premium text-center text-2xl font-bold pl-12 @error('amount') input-invalid @enderror" placeholder="0.00" value="{{ old('amount') }}" required min="0.01" max="99999999">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold" data-i18n="lydSymbol">د.ل</span>
                     </div>
-                @endforeach
-            </div>
-
-            <div id="income-grid" class="category-round-grid {{ $selectedType === 'income' ? '' : 'd-none' }}">
-                @foreach($incomeTiles as $tile)
-                    @php $col = $tile['color'] ?? '#22c55e'; @endphp
-                    <div class="cat-item">
-                        <button type="button" class="category-tile round {{ (string)$selectedCategoryId === (string)$tile['id'] ? 'active-income' : '' }}" data-type="income" data-id="{{ $tile['id'] }}" data-name="{{ $tile['name'] }}" style="--cat-color: {{ $col }};">
-                            <i class="bi {{ $tile['icon'] }}"></i>
-                        </button>
-                        <div class="cat-label">{{ $tile['name'] }}</div>
-                    </div>
-                @endforeach
-            </div>
-
-            <div id="quick-cat" class="mt-2 d-none">
-                <div class="card-soft border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-sm">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label mb-1 text-slate-800 dark:text-slate-100">اسم الفئة</label>
-                            <input type="text" id="qc-name" class="form-control pill-input" placeholder="مثلاً: قهوة">
+                    @error('amount')
+                        <div class="invalid-feedback-premium">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            <span>{{ $message }}</span>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label mb-1 text-slate-800 dark:text-slate-100">الأيقونة</label>
-                            <input type="hidden" id="qc-icon" value="">
-                            <div id="qc-icon-grid" class="d-flex flex-wrap gap-2">
-                                @foreach(($icons ?? []) as $ic)
-                                    <button type="button" class="btn btn-light icon-pick" data-icon="{{ $ic }}"><i class="bi {{ $ic }}"></i></button>
-                                @endforeach
+                    @enderror
+                </div>
+
+                <!-- Fixed Expense Toggle (Expense only) -->
+                <div id="fixed-expense-container" class="{{ $selectedType === 'expense' ? '' : 'hidden' }} glass-panel p-4 rounded-2xl border-rose-500/10">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-500 flex items-center justify-center text-lg shadow-inner">
+                                <i class="bi bi-pin-angle-fill"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-sm font-bold text-slate-800 dark:text-slate-200" data-i18n="fixedExpense">مصروف ثابت؟</h6>
+                                <p class="text-[10px] text-slate-500" data-i18n="fixedExpenseDesc">التزامات حتمية مثل الإيجار والفواتير.</p>
                             </div>
                         </div>
-                        <div class="col-md-4 d-flex gap-2">
-                            <button type="button" class="btn btn-primary flex-fill" id="qc-save">حفظ الفئة</button>
-                            <button type="button" class="btn btn-light flex-fill" id="qc-cancel">إلغاء</button>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="is_fixed" value="1" class="sr-only peer" {{ old('is_fixed') ? 'checked' : '' }}>
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[var(--gold-500)]"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Savings Amount (Income only) -->
+                <div id="savings-amount-container" class="{{ $selectedType === 'income' ? '' : 'hidden' }} mb-6">
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2" data-i18n="savingsAmount">مبلغ الادخار (اختياري)</label>
+                    <div class="relative">
+                        <input type="number" step="0.01" name="savings_amount" class="input-premium text-center text-xl font-bold pl-12 border-emerald-500/30 focus:border-emerald-500 @error('savings_amount') input-invalid @enderror" placeholder="0.00" value="{{ old('savings_amount') }}" min="0.01" max="99999999">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold" data-i18n="lydSymbol">د.ل</span>
+                    </div>
+                    @error('savings_amount')
+                        <div class="invalid-feedback-premium">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            <span>{{ $message }}</span>
+                        </div>
+                    @enderror
+                    <p class="text-[10px] text-slate-500 mt-1" data-i18n="savingsAmountNote">المبلغ الذي سيتم تحويله للهدف المختار. اتركه فارغاً لتحويل كامل المبلغ.</p>
+                </div>
+
+                <!-- Goal Selection (Income only) -->
+                <div id="goal-selection" class="{{ $selectedType === 'income' ? '' : 'hidden' }} glass-panel p-4 rounded-2xl border-emerald-500/20">
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                        <i class="bi bi-bullseye text-emerald-500"></i> <span data-i18n="savingDestination">وجهة الادخار (اختياري)</span>
+                    </label>
+                    <select name="goal_id" class="input-premium py-2 text-sm">
+                        <option value="">-- <span data-i18n="noGoal">بدون هدف</span> --</option>
+                        @foreach($goals ?? [] as $goal)
+                            @php
+                                $remaining = max(0, $goal->target_amount - $goal->current_amount);
+                            @endphp
+                            <option value="{{ $goal->id }}" {{ old('goal_id') == $goal->id ? 'selected' : '' }}>
+                                {{ $goal->name }} - (المتبقي: {{ number_format($remaining) }} د.ل)
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Category Selection -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300" data-i18n="category">الفئة</label>
+                        <button type="button" id="btn-add-cat" class="text-xs font-bold text-[var(--gold-600)] hover:underline flex items-center gap-1">
+                            <i class="bi bi-plus-circle"></i> <span data-i18n="newCategory">فئة جديدة</span>
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" name="category_id" id="category_id_hidden" value="{{ $selectedCategoryId }}">
+                    <input type="hidden" name="category" id="category_name_hidden" value="{{ $selectedCategoryName }}">
+
+                    <div id="expense-grid" class="category-grid {{ $selectedType === 'expense' ? '' : 'hidden' }}">
+                        @foreach($expenseTiles as $tile)
+                            <div class="flex flex-col items-center">
+                                <button type="button" class="category-btn {{ (string)$selectedCategoryId === (string)$tile['id'] ? 'active' : '' }}" 
+                                        data-type="expense" data-id="{{ $tile['id'] }}" data-name="{{ $tile['name'] }}" style="--cat-color: {{ $tile['color'] }};">
+                                    <i class="bi {{ $tile['icon'] }}"></i>
+                                </button>
+                                <span class="cat-label" data-i18n="{{ $catMap[$tile['name']] ?? 'uncategorized' }}">{{ $tile['name'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div id="income-grid" class="category-grid {{ $selectedType === 'income' ? '' : 'hidden' }}">
+                        @foreach($incomeTiles as $tile)
+                            <div class="flex flex-col items-center">
+                                <button type="button" class="category-btn {{ (string)$selectedCategoryId === (string)$tile['id'] ? 'active' : '' }}" 
+                                        data-type="income" data-id="{{ $tile['id'] }}" data-name="{{ $tile['name'] }}" style="--cat-color: {{ $tile['color'] }};">
+                                    <i class="bi {{ $tile['icon'] }}"></i>
+                                </button>
+                                <span class="cat-label" data-i18n="{{ $catMap[$tile['name']] ?? 'uncategorized' }}">{{ $tile['name'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                    
+                    @error('category_id')
+                        <div class="invalid-feedback-premium">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            <span>{{ $message }}</span>
+                        </div>
+                    @enderror
+                </div>
+
+                <!-- Quick Add Category (Hidden by default) -->
+                <div id="quick-cat" class="glass-panel p-4 rounded-xl hidden">
+                    <h6 class="font-bold text-sm mb-3 text-slate-700" data-i18n="quickNewCategory">فئة جديدة سريعة</h6>
+                    <div class="space-y-3">
+                        <input type="text" id="qc-name" class="input-premium py-2" data-i18n-placeholder="categoryName" placeholder="اسم الفئة">
+                        <div class="flex flex-wrap gap-2">
+                             @foreach($icons as $ic)
+                                <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 hover:border-amber-400 icon-pick" data-icon="{{ $ic }}">
+                                    <i class="bi {{ $ic }}"></i>
+                                </button>
+                            @endforeach
+                            <input type="hidden" id="qc-icon">
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" id="qc-save" class="btn-gold flex-1 py-1.5 text-sm" data-i18n="save">حفظ</button>
+                            <button type="button" id="qc-cancel" class="btn-soft flex-1 py-1.5 text-sm" data-i18n="cancel">إلغاء</button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            @error('category_id')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
-            @error('category')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
-        </div>
-
-        <div class="space-y-3">
-            <div>
-                <label class="form-label text-slate-800 dark:text-slate-100">الوصف (اختياري)</label>
-                <textarea name="note" class="form-control pill-input" rows="2" placeholder="مثلاً: عشاء مع الأصدقاء">{{ old('note') }}</textarea>
-                @error('note')<div class="text-danger small">{{ $message }}</div>@enderror
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                    <label class="form-label text-slate-800 dark:text-slate-100">التاريخ</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
-                        <input type="date" name="occurred_at" class="form-control pill-input" value="{{ old('occurred_at', now()->toDateString()) }}" required aria-required="true">
+                <!-- Date & Note -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2" data-i18n="date">التاريخ</label>
+                        <input type="date" name="occurred_at" class="input-premium @error('occurred_at') input-invalid @enderror" value="{{ old('occurred_at', now()->toDateString()) }}" required max="{{ date('Y-m-d') }}">
+                        @error('occurred_at')
+                            <div class="invalid-feedback-premium">
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                                <span>{{ $message }}</span>
+                            </div>
+                        @enderror
                     </div>
-                    <small class="text-muted">اختر اليوم الذي تمت فيه المعاملة.</small>
-                    @error('occurred_at')<div class="text-danger small">{{ $message }}</div>@enderror
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2" data-i18n="optionalNote">ملاحظة (اختياري)</label>
+                        <input type="text" name="note" class="input-premium @error('note') input-invalid @enderror" data-i18n-placeholder="notePlaceholder" placeholder="تفاصيل إضافية..." value="{{ old('note') }}" maxlength="255">
+                        @error('note')
+                            <div class="invalid-feedback-premium">
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                                <span>{{ $message }}</span>
+                            </div>
+                        @enderror
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="flex flex-col gap-2 sm:flex-row sm:gap-3 pt-2">
-            <button class="btn flex-1 border border-slate-200 text-slate-700 bg-white" type="button" onclick="window.location='{{ route('transactions.index') }}'">إلغاء</button>
-            <button class="btn flex-1 primary-gradient" id="save-btn">تأكيد</button>
-        </div>
-                </form>
-            </div>
+                <!-- Actions -->
+                <div class="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <button type="submit" class="btn-gold flex-1 text-center justify-center py-3 text-lg shadow-md" data-i18n="saveTransaction">حفظ المعاملة</button>
+                    <a href="{{ route('transactions.index') }}" class="btn-soft px-6" data-i18n="cancel">إلغاء</a>
+                </div>
+            </form>
         </div>
     </div>
 
     @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const btnExpense = document.getElementById('btn-expense');
-                const btnIncome = document.getElementById('btn-income');
-                const typeInput = document.getElementById('type');
-                const catIdInput = document.getElementById('category_id_hidden');
-                const catNameInput = document.getElementById('category_name_hidden');
-                const saveBtn = document.getElementById('save-btn');
-                const btnAddCat = document.getElementById('btn-add-cat');
-                const quickCat = document.getElementById('quick-cat');
-                const qcName = document.getElementById('qc-name');
-                const qcIcon = document.getElementById('qc-icon');
-                const expenseGrid = document.getElementById('expense-grid');
-                const incomeGrid = document.getElementById('income-grid');
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnExpense = document.getElementById('btn-expense');
+            const btnIncome = document.getElementById('btn-income');
+            const typeInput = document.getElementById('type');
+            const expenseGrid = document.getElementById('expense-grid');
+            const incomeGrid = document.getElementById('income-grid');
+            const goalSelection = document.getElementById('goal-selection');
+            const hiddenId = document.getElementById('category_id_hidden');
+            const hiddenName = document.getElementById('category_name_hidden');
 
-                const clearActive = () => {
-                    document.querySelectorAll('.category-tile').forEach(el => el.classList.remove('active-income', 'active-expense'));
-                };
+            const savingsContainer = document.getElementById('savings-amount-container');
+            const fixedExpenseContainer = document.getElementById('fixed-expense-container');
 
-                const selectDefault = (type) => {
-                    const grid = type === 'income' ? incomeGrid : expenseGrid;
-                    const first = grid?.querySelector('.category-tile');
-                    if (first) selectTile(first);
-                };
+            const clearCategorySelection = () => {
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                hiddenId.value = '';
+                hiddenName.value = '';
+            };
 
-                const selectTile = (tile) => {
-                    clearActive();
-                    const type = tile.dataset.type;
-                    tile.classList.add(type === 'income' ? 'active-income' : 'active-expense');
-                    catIdInput.value = tile.dataset.id || '';
-                    catNameInput.value = tile.dataset.name || '';
-                };
-
-                const activateType = (type) => {
-                    typeInput.value = type;
-                    if (type === 'income') {
-                        btnIncome.classList.add('active-income');
-                        btnExpense.classList.remove('active-expense');
-                        incomeGrid.classList.remove('d-none');
-                        expenseGrid.classList.add('d-none');
-                    } else {
-                        btnExpense.classList.add('active-expense');
-                        btnIncome.classList.remove('active-income');
-                        expenseGrid.classList.remove('d-none');
-                        incomeGrid.classList.add('d-none');
-                    }
-                    // امسح اختيار النوع الآخر لتفادي تعارض الفئة مع النوع
-                    catIdInput.value = '';
-                    catNameInput.value = '';
-                    selectDefault(type);
-                };
-
-                btnExpense.addEventListener('click', () => activateType('expense'));
-                btnIncome.addEventListener('click', () => activateType('income'));
-
-                document.querySelectorAll('.category-tile').forEach(tile => {
-                    tile.addEventListener('click', () => selectTile(tile));
-                });
-
-                activateType(typeInput.value || 'expense');
-
-                // Quick add category handlers
-                if (btnAddCat) {
-                    btnAddCat.addEventListener('click', () => quickCat.classList.toggle('d-none'));
+            const enforceCategoryVisibility = (type) => {
+                const selector = `.category-btn[data-type="${type}"][data-id="${hiddenId.value}"]`;
+                const matching = hiddenId.value ? document.querySelector(selector) : null;
+                if (!matching) {
+                    clearCategorySelection();
                 }
-                const iconButtons = Array.from(document.querySelectorAll('#qc-icon-grid .icon-pick'));
-                const setIcon = (btn) => {
-                    iconButtons.forEach(b => b.classList.remove('active'));
+            };
+
+            const setType = (type) => {
+                const oldType = typeInput.value;
+                typeInput.value = type;
+                if(type === 'income') {
+                    btnIncome.classList.add('bg-white', 'dark:bg-slate-700', 'shadow', 'text-green-500');
+                    btnIncome.classList.remove('text-text-muted');
+                    btnExpense.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow', 'text-red-500');
+                    btnExpense.classList.add('text-text-muted');
+                    incomeGrid.classList.remove('hidden');
+                    expenseGrid.classList.add('hidden');
+                    goalSelection.classList.remove('hidden');
+                    savingsContainer.classList.remove('hidden');
+                    fixedExpenseContainer.classList.add('hidden');
+                } else {
+                    btnExpense.classList.add('bg-white', 'dark:bg-slate-700', 'shadow', 'text-red-500');
+                    btnExpense.classList.remove('text-text-muted');
+                    btnIncome.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow', 'text-green-500');
+                    btnIncome.classList.add('text-text-muted');
+                    expenseGrid.classList.remove('hidden');
+                    incomeGrid.classList.add('hidden');
+                    goalSelection.classList.add('hidden');
+                    savingsContainer.classList.add('hidden');
+                    fixedExpenseContainer.classList.remove('hidden');
+                }
+                
+                // Reset selection if type changed
+                if (oldType !== type) {
+                    clearCategorySelection();
+                }
+
+                // Ensure no hidden cross-type category remains selected
+                enforceCategoryVisibility(type);
+            };
+
+            btnExpense.addEventListener('click', () => setType('expense'));
+            btnIncome.addEventListener('click', () => setType('income'));
+
+            // Initialize view to enforce the right grid and clear mismatched category
+            setType(typeInput.value);
+
+            // Category Selection
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    qcIcon.value = btn.dataset.icon || '';
-                };
-                if (iconButtons.length) setIcon(iconButtons[0]);
-                iconButtons.forEach(btn => btn.addEventListener('click', () => setIcon(btn)));
-                const qcCancel = document.getElementById('qc-cancel');
-                if (qcCancel) {
-                    qcCancel.addEventListener('click', () => {
-                        quickCat.classList.add('d-none');
-                        qcName.value='';
-                        qcIcon.value='';
-                        iconButtons.forEach(b=>b.classList.remove('active'));
-                        if (iconButtons[0]) { iconButtons[0].classList.add('active'); qcIcon.value = iconButtons[0].dataset.icon || ''; }
-                    });
-                }
-                const qcSave = document.getElementById('qc-save');
-                if (qcSave) {
-                    qcSave.addEventListener('click', async () => {
-                        const name = qcName.value.trim();
-                        const icon = qcIcon.value;
-                        const type = typeInput.value || 'expense';
-                        if (!name) return alert('يرجى إدخال اسم الفئة');
-                        const token = document.querySelector('input[name="_token"]').value;
-                        const res = await fetch('{{ route('categories.quickStore') }}', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token }, body: JSON.stringify({ name, icon, type })
-                        });
-                        if (!res.ok) return alert('تعذر حفظ الفئة');
-                        const cat = await res.json();
-                        const grid = type === 'income' ? incomeGrid : expenseGrid;
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'cat-item';
-                        const btn = document.createElement('button');
-                        btn.type = 'button'; btn.className='category-tile round ' + (type==='income'?'active-income':'active-expense');
-                        btn.dataset.type = type; btn.dataset.id = cat.id; btn.dataset.name = cat.name;
-                        btn.innerHTML = `<i class="bi ${cat.icon || (type==='income'?'bi-cash-coin':'bi-basket')}"></i>`;
-                        const palette = {
-                            'طعام': '#F59E0B','تسوق': '#8B5CF6','فواتير': '#EF4444','ترفيه': '#3B82F6','هاتف': '#06B6D4','رياضة': '#10B981','تجميل': '#EC4899','تعليم': '#22C55E','اجتماعي': '#6366F1','راتب': '#0EA5E9','مكافأة': '#F43F5E','استثمار': '#34D399','تحويل': '#64748B'
-                        };
-                        const color = palette[cat.name] || (type==='income' ? '#22c55e' : '#ef4444');
-                        btn.style.setProperty('--cat-color', color);
-                        const label = document.createElement('div');
-                        label.className = 'cat-label';
-                        label.textContent = cat.name;
-                        clearActive();
-                        wrapper.appendChild(btn);
-                        wrapper.appendChild(label);
-                        grid.appendChild(wrapper);
-                        catIdInput.value = cat.id; catNameInput.value = cat.name;
-                        btn.addEventListener('click', () => { selectTile(btn); });
-                        quickCat.classList.add('d-none'); qcName.value=''; qcIcon.value='';
-                    });
-                }
+                    hiddenId.value = btn.dataset.id;
+                    hiddenName.value = btn.dataset.name;
+                    checkAmount(); // Trigger check
+                });
             });
-        </script>
+
+            // AI Budget Check Logic
+            const amountInput = document.getElementById('amount');
+            const alertBox = document.getElementById('budget-alert');
+            const alertMsg = document.getElementById('budget-alert-msg');
+            let timer;
+
+            function checkAmount() {
+                const amount = amountInput.value;
+                const catId = hiddenId.value;
+                const type = typeInput.value;
+
+                if (type !== 'expense' || !amount || !catId) {
+                    if(alertBox) alertBox.classList.add('hidden');
+                    return;
+                }
+
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    fetch('{{ route("transactions.checkBudget") }}', {
+                         method: 'POST',
+                         headers: { 
+                             'Content-Type': 'application/json',
+                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                         },
+                         body: JSON.stringify({ amount, category_id: catId })
+                    })
+                    .then(r => r.json())
+                    .then(d => {
+                        if(d.status === 'warning' && alertBox) {
+                            alertMsg.innerText = d.message;
+                            alertBox.classList.remove('hidden');
+                        } else if(alertBox) {
+                            alertBox.classList.add('hidden');
+                        }
+                    })
+                    .catch(e => console.log('Check budget skipped'));
+                }, 600);
+            }
+
+            if(amountInput) amountInput.addEventListener('input', checkAmount);
+
+            // Quick Category Logic
+            const btnAddCat = document.getElementById('btn-add-cat');
+            const quickCat = document.getElementById('quick-cat');
+            const qcCancel = document.getElementById('qc-cancel');
+            const qcSave = document.getElementById('qc-save');
+            const qcIcon = document.getElementById('qc-icon');
+            
+            if(btnAddCat) btnAddCat.addEventListener('click', () => quickCat.classList.remove('hidden'));
+            if(qcCancel) qcCancel.addEventListener('click', () => quickCat.classList.add('hidden'));
+            
+            document.querySelectorAll('.icon-pick').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.icon-pick').forEach(b => b.classList.remove('border-amber-400', 'bg-amber-50'));
+                    btn.classList.add('border-amber-400', 'bg-amber-50');
+                    qcIcon.value = btn.dataset.icon;
+                });
+            });
+
+            if(qcSave) {
+                qcSave.addEventListener('click', async () => {
+                    const name = document.getElementById('qc-name').value;
+                    const icon = qcIcon.value;
+                    const type = typeInput.value;
+                    if(!name) return;
+
+                    // Simple AJAX post to create category (simulated or real route)
+                    const token = document.querySelector('meta[name="csrf-token"]').content;
+                    try {
+                        const res = await fetch('{{ route('categories.quickStore') }}', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token },
+                            body: JSON.stringify({ name, icon, type })
+                        });
+                        if(res.ok) {
+                            const cat = await res.json();
+                            // Append new category to grid
+                            const grid = type === 'income' ? incomeGrid : expenseGrid;
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'flex flex-col items-center animate-enter';
+                            wrapper.innerHTML = `
+                                <button type="button" class="category-btn active" data-id="${cat.id}" data-name="${cat.name}" style="--cat-color: #22c55e;">
+                                    <i class="bi ${cat.icon || 'bi-hash'}"></i>
+                                </button>
+                                <span class="cat-label">${cat.name}</span>
+                            `;
+                            // Deselect others and select this new one
+                            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                            grid.appendChild(wrapper);
+                            hiddenId.value = cat.id; hiddenName.value = cat.name;
+                            
+                            // Re-bind click
+                            wrapper.querySelector('button').addEventListener('click', function() {
+                                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                                this.classList.add('active');
+                                hiddenId.value = this.dataset.id; hiddenName.value = this.dataset.name;
+                            });
+
+                            quickCat.classList.add('hidden');
+                            document.getElementById('qc-name').value = '';
+                        }
+                    } catch(e) { console.error(e); alert('Error creating category'); }
+                });
+            }
+
+            // Double Submission Protection
+            const form = document.querySelector('form');
+            const submitBtn = document.querySelector('button[type="submit"]');
+            if(form && submitBtn) {
+                form.addEventListener('submit', function() {
+                    // Only disable if form is valid (HTML5 validation)
+                    if(form.checkValidity()) {
+                        submitBtn.disabled = true;
+                        submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+                        const originalText = submitBtn.innerText;
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> جارِ الحفظ...';
+                        
+                        // Safety timeout in case of server error/network hang (5 seconds)
+                        setTimeout(() => {
+                            submitBtn.disabled = false;
+                            submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                            submitBtn.innerHTML = originalText;
+                        }, 5000);
+                    }
+                });
+            }
+
+            // --- AI Auto-Classify Logic ---
+            const noteInput = document.querySelector('input[name="note"]');
+            let classifyTimer;
+            if (noteInput) {
+                noteInput.addEventListener('input', () => {
+                    clearTimeout(classifyTimer);
+                    classifyTimer = setTimeout(() => {
+                        const desc = noteInput.value.trim();
+                        if (desc.length < 3) return; 
+
+                        console.log('Classifying (debounced):', desc);
+                    
+                    fetch('{{ route("ai.classify") }}', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ description: desc })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success' && data.category_id) {
+                            const btn = document.querySelector(`.category-btn[data-id="${data.category_id}"]`);
+                            if (btn) {
+                                // Auto-select with animation
+                                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                                btn.classList.add('active');
+                                hiddenId.value = btn.dataset.id;
+                                hiddenName.value = btn.dataset.name;
+                                
+                                // Visual Cue (Magic Effect)
+                                const originalTransform = btn.style.transform;
+                                btn.style.transition = 'all 0.5s ease';
+                                btn.style.transform = 'scale(1.2) rotate(10deg)';
+                                btn.style.boxShadow = '0 0 20px var(--gold-500)';
+                                
+                                const icon = btn.querySelector('i');
+                                const originalIconClass = icon.className;
+                                icon.className = 'bi bi-stars text-white'; // Change icon momentarily
+                                
+                                setTimeout(() => {
+                                    btn.style.transform = originalTransform || 'scale(1.05)'; // Return to active state scale
+                                    btn.style.boxShadow = '';
+                                    icon.className = originalIconClass;
+                                    // Flash message
+                                    
+                                }, 800);
+                            }
+                        }
+                    })
+                    .catch(err => console.log('AI Classify silent fail'));
+                    }, 500);
+                });
+            }
+        });
+    </script>
     @endpush
 @endsection

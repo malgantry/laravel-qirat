@@ -7,8 +7,15 @@ export default {
     './resources/**/*.js',
     './resources/**/*.vue',
   ],
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
+      colors: {
+        text: {
+          main: 'var(--text-main)',
+          muted: 'var(--text-muted)',
+        },
+      },
       fontFamily: {
         sans: ['Cairo', ...defaultTheme.fontFamily.sans],
       },

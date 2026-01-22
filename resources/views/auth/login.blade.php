@@ -1,74 +1,90 @@
 @extends('layouts.app')
 
+@section('hideNav', true)
+
 @section('content')
-<style>
-    .auth-hero { min-height: 80vh; display: grid; place-items: center; background: radial-gradient(circle at 10% 20%, rgba(201,162,39,0.10), transparent 35%), radial-gradient(circle at 80% 0%, rgba(11,11,11,0.08), transparent 40%), linear-gradient(135deg, #0b0b0b 0%, #1f1f1f 35%, #c9a227 100%); padding: 48px 16px; }
-    .auth-card { max-width: 480px; width: 100%; border-radius: 18px; background: var(--card-bg); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 25px 60px rgba(0,0,0,0.18); position: relative; overflow: hidden; }
-    .auth-card .accent-bar { height: 4px; width: 100%; background: var(--primary-gradient); }
-    .auth-card .card-body { padding: 28px; }
-    .auth-card h5 { font-weight: 800; letter-spacing: -0.02em; }
-    .auth-sub { color: #9ca3af; font-size: 0.95rem; }
-</style>
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden" dir="rtl">
 
-<div class="auth-hero" dir="rtl">
-    <div class="auth-card">
-        <div class="accent-bar"></div>
-        <div class="card-body">
-            <div class="d-flex align-items-start gap-3 mb-3">
-                <div class="p-2 rounded-circle" style="background: rgba(201,162,39,0.15); color: #c9a227;">
-                    <i class="bi bi-box-arrow-in-right fs-4"></i>
-                </div>
-                <div>
-                    <h5 class="mb-1">تسجيل الدخول</h5>
-                    <div class="auth-sub">ادخل بريدك وكلمة المرور للمتابعة.</div>
-                </div>
+    <div class="card-premium max-w-md w-full p-6 sm:p-8 relative z-10 animate-enter">
+        <div class="text-center mb-8">
+            <div class="landing-logo p-4 rounded-[2.5rem] bg-white dark:bg-slate-800/30 backdrop-blur-2xl border border-white/40 shadow-xl transition-all hover:scale-105 duration-500 ring-1 ring-gold-200/20 theme-icon-wrapper mx-auto mb-6">
+                <img src="{{ asset('images/logo-qirat-premium.jpg') }}" alt="شعار قيراط" data-i18n-alt="appLogo" class="h-20 w-auto light-only rounded-2xl shadow-sm" loading="lazy">
+                <img src="{{ asset('images/logo-dark.jpg') }}" alt="شعار قيراط" data-i18n-alt="appLogo" class="h-20 w-auto dark-only" loading="lazy">
             </div>
+            <h2 class="text-3xl font-heading font-black text-text-main tracking-tight" data-i18n="login">تسجيل الدخول</h2>
+            <p class="mt-2 text-sm font-medium text-text-muted" data-i18n="welcomeBack">
+                <span data-i18n="welcomeBack">مرحباً بك مجدداً في قيراط</span>
+            </p>
+        </div>
 
+        <form class="space-y-6" action="{{ route('login.perform') }}" method="POST">
+            @csrf
+            
             @if(session('status'))
-                <div class="alert alert-info">{{ session('status') }}</div>
+                <div class="p-3 rounded-lg bg-blue-50 text-blue-700 text-sm border border-blue-100">
+                    {{ session('status') }}
+                </div>
             @endif
 
-            <form method="POST" action="{{ route('login.perform') }}" class="space-y-3">
-                @csrf
-                <div class="mb-3">
-                    <label class="form-label">البريد الإلكتروني</label>
-                    <div class="input-group input-group-lg">
-                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                        <input type="email" name="email" class="form-control" value="{{ old('email') }}" required autofocus>
-                    </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1" data-i18n="email">البريد الإلكتروني</label>
+                    <input id="email" name="email" type="email" required class="input-premium @error('email') input-invalid @enderror" data-i18n-placeholder="email" placeholder="name@example.com" value="{{ old('email') }}" maxlength="120">
                     @error('email')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
+                        <div class="invalid-feedback-premium">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            <span>{{ $message }}</span>
+                        </div>
                     @enderror
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">كلمة المرور</label>
-                    <div class="input-group input-group-lg">
-                        <span class="input-group-text"><i class="bi bi-key"></i></span>
-                        <input id="login-password" type="password" name="password" class="form-control" required>
-                        <button class="input-group-text" type="button" aria-label="إظهار أو إخفاء كلمة المرور" data-toggle-password="login-password">
-                            <i class="bi bi-eye"></i>
-                            <span class="toggle-text d-none d-md-inline" style="margin-inline-start: 6px;">إظهار</span>
-                        </button>
-                    </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1" data-i18n="password">كلمة المرور</label>
+                    <input id="password" name="password" type="password" required class="input-premium @error('password') input-invalid @enderror" data-i18n-placeholder="password" placeholder="******" minlength="6">
                     @error('password')
-                        <div class="text-danger small mt-1">{{ $message }}</div>
+                        <div class="invalid-feedback-premium">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            <span>{{ $message }}</span>
+                        </div>
                     @enderror
                 </div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="remember" id="remember">
-                        <label class="form-check-label" for="remember">تذكرني</label>
-                    </div>
-                    <a href="{{ route('password.request') }}" class="text-decoration-none">نسيت كلمة المرور؟</a>
-                </div>
-                <button type="submit" class="btn w-100 py-2 primary-gradient fw-bold">دخول</button>
-            </form>
-
-            <div class="text-center mt-4">
-                <span>ليس لديك حساب؟</span>
-                <a href="{{ route('register') }}" class="fw-semibold">إنشاء حساب</a>
             </div>
-        </div>
+
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <input id="remember-me" name="remember" type="checkbox" class="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded">
+                    <label for="remember-me" class="mr-2 block text-sm text-slate-900 dark:text-slate-300" data-i18n="rememberMe">
+                        تذكرني
+                    </label>
+                </div>
+
+                <div class="text-sm">
+                    <a href="{{ route('password.request') }}" class="font-medium text-amber-600 hover:text-amber-500" data-i18n="forgotPassword">
+                        نسيت كلمة المرور؟
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" class="w-full btn-gold py-3 text-lg shadow-xl" data-i18n="enter">
+                    <span data-i18n="login">دخول</span>
+                </button>
+            </div>
+            
+            <div class="text-center mt-6">
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                    <span data-i18n="noAccount">ليس لديك حساب؟</span>
+                    <a href="{{ route('register') }}" class="font-medium text-amber-600 hover:text-amber-500" data-i18n="register">
+                        إنشاء حساب
+                    </a>
+                </p>
+                <div class="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+                     <a href="{{ url('/') }}" class="text-sm text-text-muted hover:text-slate-700 dark:hover:text-slate-300 flex items-center justify-center gap-2">
+                        <i class="bi bi-arrow-right"></i> <span data-i18n="backToHome">عودة للرئيسية</span>
+                    </a>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 

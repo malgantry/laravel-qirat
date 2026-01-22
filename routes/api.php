@@ -1,9 +1,6 @@
 <?php
 
-use App\Http\Controllers\AiPredictController;
-use App\Http\Controllers\AiStatusController;
+// Deprecated AI endpoints removed
 use Illuminate\Support\Facades\Route;
 
-Route::post('/ai/predict', AiPredictController::class);
-Route::get('/ai/health', [AiStatusController::class, 'health']);
-Route::get('/ai/accuracy', [AiStatusController::class, 'accuracy']);
+// (intentionally left empty)

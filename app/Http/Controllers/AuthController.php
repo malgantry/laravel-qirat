@@ -20,15 +20,15 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+            'email' => ['required', 'email', 'max:120'],
+            'password' => ['required', 'min:6'],
         ]);
 
         $user = User::where('email', $credentials['email'])->first();
         if ($user && ! $user->is_active) {
             $this->logAttempt($user, $credentials['email'], false, $request);
             throw ValidationException::withMessages([
-                'email' => __('تم تعطيل هذا الحساب. الرجاء التواصل مع مدير النظام.'),
+                'email' => __('This account has been disabled. Please contact the system administrator.'),
             ]);
         }
 
@@ -41,7 +41,7 @@ class AuthController extends Controller
 
         $this->logAttempt($user, $credentials['email'], false, $request);
         throw ValidationException::withMessages([
-            'email' => __('بيانات الدخول غير صحيحة.'),
+            'email' => __('Invalid login credentials.'),
         ]);
     }
 
@@ -53,9 +53,9 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', 'min:6'],
+            'name' => ['required', 'string', 'min:3', 'max:80'],
+            'email' => ['required', 'email', 'max:120', 'unique:users,email'],
+            'password' => ['required', 'confirmed', 'min:8'],
         ]);
 
         $user = User::create([
@@ -63,6 +63,30 @@ class AuthController extends Controller
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
+
+        // Welcome Notification
+        try {
+            $user->notify(new \App\Notifications\GeneralAlert([
+                'title' => __('Welcome to Qiratae'),
+                'body' => __('Glad to have you with us. Start by setting your budget.'),
+                'icon' => 'bi-emoji-smile',
+                'color' => 'text-[var(--gold-600)]'
+            ]));
+
+            // Admin Notification
+            $admins = User::where('is_admin', true)->get();
+            foreach ($admins as $admin) {
+                $admin->notify(new \App\Notifications\GeneralAlert([
+                    'title' => __('New Member'),
+                    'body' => __('Member Joined', ['name' => $user->name]),
+                    'icon' => 'bi-person-plus-fill',
+                    'color' => 'text-blue-500',
+                    'link' => route('admin.users')
+                ]));
+            }
+        } catch (\Exception $e) {
+            // Context: Notifications shouldn't block registration
+        }
 
         Auth::login($user);
         $request->session()->regenerate();

@@ -6,6 +6,10 @@ use Laravel\Dusk\DuskServiceProvider;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Models\User;
+use App\Models\Transaction;
+use App\Models\Goal;
+use App\Observers\TransactionObserver;
+use App\Observers\GoalObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,5 +35,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('financeUser', function (User $user) {
             return ! (bool) $user->is_admin;
         });
+
+        Transaction::observe(TransactionObserver::class);
+        Goal::observe(GoalObserver::class);
     }
 }
